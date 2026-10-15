@@ -43,7 +43,7 @@
 
 1. Скачайте `system-status-card.js` со страницы [релизов](https://github.com/Lordhmen/system-status-card/releases)
    и положите в `/config/www/system-status-card.js`.
-2. **Настройки → Панели → ⋮ → Ресурсы → Добавить ресурс**: URL `/local/system-status-card.js?v=0.1.3`, тип **JavaScript-модуль**.
+2. **Настройки → Панели → ⋮ → Ресурсы → Добавить ресурс**: URL `/local/system-status-card.js?v=0.1.4`, тип **JavaScript-модуль**.
 
 ## Пример
 
@@ -112,9 +112,13 @@ sections:
 | `value`, `sub` | Плитка без сущности: свой текст (например, IP со ссылкой через `tap_action: {action: url}`) |
 | `secondary`, `secondary_prefix`, `secondary_decimals` | Вторая строка из другой сущности (время — «35 мин назад») |
 | `secondary_attribute` | Вторая строка из атрибута той же сущности |
-| `tap_action` | `navigate` / `url` / `none`, иначе открывается карточка сущности |
+| `tap_action` | `navigate` / `url` / `none` / `list`, иначе открывается карточка сущности |
 
 `min_width` у секции — минимальная ширина плитки (по умолчанию 132 px).
+
+`tap_action: {action: list, attribute: packages, title: "Можно обновить"}` — по нажатию под плитками раскрывается
+список из атрибута (строка через запятую или массив; `separator` — свой разделитель), с кнопками «Подробнее»
+(карточка сущности, отключается `more_info: false`) и «✕».
 
 ### `meters` — шкалы
 

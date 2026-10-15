@@ -14,7 +14,7 @@
  * https://github.com/Lordhmen/system-status-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const SSC_VERSION = "0.1.3";
+const SSC_VERSION = "0.1.4";
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -403,6 +403,15 @@ class SystemStatusCard extends HTMLElement {
         .tile.warn .v { color: var(--ssc-warn); } .tile.bad .v { color: var(--ssc-bad); } .tile.na .v { color: var(--ssc-na); }
         .tile .s { font-size: .75em; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
         .tile.warn .s { color: var(--ssc-warn); }
+        .tile.open { outline: 1px solid var(--ssc-accent); }
+        .lpanel { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--ssc-hover); }
+        .lhead { display: flex; align-items: center; gap: 8px; font-size: .85em; font-weight: 500; margin-bottom: 8px; }
+        .lhead > span { flex: 1; }
+        .lhead .cnt { color: var(--secondary-text-color); font-weight: 400; margin-left: 4px; }
+        .lbtn { font: inherit; font-size: .9em; background: none; border: 1px solid var(--divider-color); color: var(--secondary-text-color); border-radius: 8px; padding: 2px 8px; cursor: pointer; }
+        .lbtn:hover { color: var(--ssc-accent); border-color: var(--ssc-accent); }
+        .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+        .lchip { font-size: .78em; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--divider-color); font-family: var(--code-font-family, monospace); }
         /* шкалы */
         .meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--ssc-meter-min, 200px), 1fr)); gap: 10px 18px; }
         .meter { cursor: pointer; min-width: 0; }
@@ -498,12 +507,31 @@ class SystemStatusCard extends HTMLElement {
 
   _renderTiles(s, si) {
     const style = s.min_width ? ` style="--ssc-tile-min:${Number(s.min_width)}px"` : "";
-    return `<div class="tiles"${style}>` + s.items.map((it, i) => {
+    let panel = "";
+    const tiles = `<div class="tiles"${style}>` + s.items.map((it, i) => {
       const t = this._tile(it);
-      return `<div class="tile ${t.lvl}" data-s="${si}" data-i="${i}" title="${esc(t.name)}">
+      const open = this._open === `${si}:${i}`;
+      if (open) panel = this._renderList(it, si, i);
+      return `<div class="tile ${t.lvl}${open ? " open" : ""}" data-s="${si}" data-i="${i}" title="${esc(t.name)}">
         <div class="k">${t.icon ? `<ha-icon icon="${esc(t.icon)}"></ha-icon>` : ""}<span>${esc(t.name)}</span></div>
         <div class="v${String(t.value).length > 11 ? " long" : ""}">${esc(t.value)}</div><div class="s">${esc(t.sub) || "&nbsp;"}</div></div>`;
     }).join("") + `</div>`;
+    return tiles + panel;
+  }
+
+  // Раскрывающийся список из атрибута (tap_action: {action: list, attribute: packages})
+  _renderList(it, si, i) {
+    const t = it.tap_action || {};
+    const st = this._st(t.entity || it.entity);
+    let v = st?.attributes?.[t.attribute];
+    let items = Array.isArray(v) ? v : String(v ?? "").split(t.separator || ",");
+    items = items.map((x) => String(x).trim()).filter(Boolean);
+    const title = t.title || it.name || "";
+    const body = items.length
+      ? `<div class="chips">${items.map((x) => `<span class="lchip">${esc(x)}</span>`).join("")}</div>`
+      : `<div class="msg">${esc(t.empty_text || "Список пуст")}</div>`;
+    return `<div class="lpanel"><div class="lhead"><span>${esc(title)}${items.length ? ` <span class="cnt">${items.length}</span>` : ""}</span>
+      ${t.more_info !== false ? `<button class="lbtn" data-mi="${si}:${i}">Подробнее</button>` : ""}<button class="lbtn" data-close="1" aria-label="Закрыть">✕</button></div>${body}</div>`;
   }
 
   _renderMeters(s, si) {
@@ -662,8 +690,13 @@ class SystemStatusCard extends HTMLElement {
     this.dispatchEvent(new CustomEvent("hass-notification", { detail: { message }, bubbles: true, composed: true }));
   }
 
-  _tap(it) {
+  _tap(it, key) {
     const t = it.tap_action;
+    if (t?.action === "list") {
+      this._open = this._open === key ? null : key;
+      this._html = null;
+      return this._render();
+    }
     if (t?.action === "navigate" && t.navigation_path) return this._navigate(t.navigation_path);
     if (t?.action === "url" && t.url_path) return window.open(t.url_path, "_blank", "noopener");
     if (t?.action === "none") return;
@@ -741,10 +774,18 @@ class SystemStatusCard extends HTMLElement {
       this._moreInfo(typeof v === "string" ? v : v?.entity);
       return;
     }
+    if (t.closest("[data-close]")) { this._open = null; this._html = null; this._render(); return; }
+    const mi = t.closest("[data-mi]");
+    if (mi) {
+      const [a, b] = mi.dataset.mi.split(":");
+      const it = c.sections[+a]?.items?.[+b];
+      if (it) this._moreInfo(it.tap_action?.entity || it.entity);
+      return;
+    }
     const tile = t.closest(".tile[data-i], .meter[data-i]");
     if (tile) {
       const it = c.sections[+tile.dataset.s]?.items?.[+tile.dataset.i];
-      if (it) this._tap(it);
+      if (it) this._tap(it, `${tile.dataset.s}:${tile.dataset.i}`);
     }
   }
 }

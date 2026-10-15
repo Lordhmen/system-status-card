@@ -185,3 +185,16 @@ test("плитки: binary по атрибуту, fail_level, secondary_attribut
   c.hass = hass({ "sensor.apt": st("0", { reboot_required: false, security: 0 }) });
   assert.equal(c._tile(c._config.sections[0].items[0]).lvl, "ok");
 });
+
+test("плитка со списком из атрибута: раскрывается и закрывается", () => {
+  const c = new SSC();
+  c.setConfig({ sections: [{ type: "tiles", items: [
+    { entity: "sensor.apt", name: "Пакеты", tap_action: { action: "list", attribute: "packages", title: "Можно обновить" } },
+  ] }] });
+  c.hass = hass({ "sensor.apt": st("3", { packages: "tzdata, mesa-va-drivers,gnome-shell" }) });
+  c._tap(c._config.sections[0].items[0], "0:0");
+  const html = c.shadowRoot.getElementById("body").innerHTML;
+  assert.match(html, /Можно обновить/); assert.match(html, /lchip">mesa-va-drivers</); assert.match(html, /tile .*open/);
+  c._tap(c._config.sections[0].items[0], "0:0");
+  assert.doesNotMatch(c.shadowRoot.getElementById("body").innerHTML, /lpanel/);
+});
