@@ -51,6 +51,36 @@ sections:
         danger: true
         confirm: Перезапустить Home Assistant?
 ---
+# Мини-ПК с обновлениями пакетов (сенсор с атрибутами security и reboot_required)
+type: custom:system-status-card
+title: Настенный монитор
+icon: mdi:monitor-dashboard
+sections:
+  - type: tiles
+    items:
+      - name: IP
+        value: 192.168.1.50
+        tap_action: { action: none }
+      - entity: sensor.kiosk_apt_updates
+        name: Пакеты
+        warn: 1
+        secondary_attribute: security
+        secondary_prefix: "безопасности:"
+      - entity: sensor.kiosk_apt_updates
+        name: Перезагрузка
+        attribute: reboot_required
+        format: binary
+        ok_state: false
+        on_text: не нужна
+        off_text: нужна
+        fail_level: warn
+  - type: buttons
+    items:
+      - name: Обновить пакеты
+        icon: mdi:package-up
+        entity: script.kiosk_apt_upgrade
+        confirm: Обновить все пакеты?
+---
 # Аддоны и обновления
 type: custom:system-status-card
 sections:

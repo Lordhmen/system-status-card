@@ -43,7 +43,7 @@
 
 1. Скачайте `system-status-card.js` со страницы [релизов](https://github.com/Lordhmen/system-status-card/releases)
    и положите в `/config/www/system-status-card.js`.
-2. **Настройки → Панели → ⋮ → Ресурсы → Добавить ресурс**: URL `/local/system-status-card.js?v=0.1.2`, тип **JavaScript-модуль**.
+2. **Настройки → Панели → ⋮ → Ресурсы → Добавить ресурс**: URL `/local/system-status-card.js?v=0.1.3`, тип **JavaScript-модуль**.
 
 ## Пример
 
@@ -107,8 +107,11 @@ sections:
 | `warn_after`, `bad_after` | Для `ago`: пороги возраста в часах |
 | `decimals`, `factor`, `unit` | Округление, множитель и единица (иначе — как форматирует HA) |
 | `attribute` | Брать атрибут вместо состояния |
-| `on_text`, `off_text`, `ok_state` | Для `binary`: подписи и «хорошее» состояние (по умолчанию `on`) |
-| `secondary`, `secondary_prefix`, `secondary_decimals` | Вторая строка из другой сущности |
+| `on_text`, `off_text`, `ok_state` | Для `binary`: подписи и «хорошее» значение (`on`, для атрибута — `true`; можно `false`) |
+| `fail_level` | Для `binary`: цвет «плохого» значения — `bad` (по умолчанию) или `warn` |
+| `value`, `sub` | Плитка без сущности: свой текст (например, IP со ссылкой через `tap_action: {action: url}`) |
+| `secondary`, `secondary_prefix`, `secondary_decimals` | Вторая строка из другой сущности (время — «35 мин назад») |
+| `secondary_attribute` | Вторая строка из атрибута той же сущности |
 | `tap_action` | `navigate` / `url` / `none`, иначе открывается карточка сущности |
 
 `min_width` у секции — минимальная ширина плитки (по умолчанию 132 px).

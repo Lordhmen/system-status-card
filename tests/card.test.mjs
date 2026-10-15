@@ -169,3 +169,19 @@ test("таблица и кнопки; ошибки конфигурации", ()
   assert.throws(() => c.setConfig({ sections: [{ type: "x" }] }), /Unknown section/);
   assert.throws(() => c.setConfig({ sections: [{ type: "tiles" }] }), /items/);
 });
+
+test("плитки: binary по атрибуту, fail_level, secondary_attribute, статичная плитка", () => {
+  const c = new SSC();
+  c.setConfig({ sections: [{ type: "tiles", items: [
+    { entity: "sensor.apt", attribute: "reboot_required", format: "binary", ok_state: false, on_text: "не нужна", off_text: "нужна", fail_level: "warn" },
+    { entity: "sensor.apt", warn: 1, secondary_attribute: "security", secondary_prefix: "безопасности" },
+    { name: "IP", value: "192.168.10.1" },
+  ] }] });
+  c.hass = hass({ "sensor.apt": st("24", { reboot_required: true, security: 3 }) });
+  const t = c._config.sections[0].items.map((it) => c._tile(it));
+  assert.equal(t[0].value, "нужна"); assert.equal(t[0].lvl, "warn");
+  assert.equal(t[1].lvl, "warn"); assert.equal(t[1].sub, "безопасности 3");
+  assert.equal(t[2].value, "192.168.10.1");
+  c.hass = hass({ "sensor.apt": st("0", { reboot_required: false, security: 0 }) });
+  assert.equal(c._tile(c._config.sections[0].items[0]).lvl, "ok");
+});

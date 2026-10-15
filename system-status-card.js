@@ -14,7 +14,7 @@
  * https://github.com/Lordhmen/system-status-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const SSC_VERSION = "0.1.2";
+const SSC_VERSION = "0.1.3";
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -300,9 +300,11 @@ class SystemStatusCard extends HTMLElement {
         break;
       }
       case "binary": {
-        const on = st.state === (it.ok_state ?? "on");
+        // ok_state — «хорошее» значение: "on" для состояния, true для атрибута (можно false: «перезагрузка не нужна»)
+        const val = it.attribute ? a[it.attribute] : st.state;
+        const on = String(val) === String(it.ok_state ?? (it.attribute ? true : "on"));
         out.value = on ? (it.on_text ?? "OK") : (it.off_text ?? "нет");
-        out.lvl = on ? "ok" : "bad";
+        out.lvl = on ? "ok" : (it.fail_level || "bad");
         break;
       }
       case "ago":
@@ -333,7 +335,10 @@ class SystemStatusCard extends HTMLElement {
         out.lvl = level(this._num(st, it), it.warn, it.bad, it.below);
       }
     }
-    if (it.secondary) {
+    if (it.secondary_attribute) {
+      const v2 = a[it.secondary_attribute];
+      out.sub = (it.secondary_prefix ? it.secondary_prefix + " " : "") + (NA.has(v2) ? "—" : String(v2));
+    } else if (it.secondary) {
       out.sub = (it.secondary_prefix ? it.secondary_prefix + " " : "") + this._fmtSecondary(it.secondary, it.secondary_decimals);
     } else if (it.sub !== undefined && !["ago", "in", "since"].includes(fmt)) out.sub = it.sub;
     out.icon = out.icon || a.icon || "";
