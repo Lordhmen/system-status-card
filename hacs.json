@@ -1,0 +1,6 @@
+{
+  "name": "System Status Card",
+  "filename": "system-status-card.js",
+  "render_readme": true,
+  "homeassistant": "2024.4.0"
+}

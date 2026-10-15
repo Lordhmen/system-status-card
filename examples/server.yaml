@@ -1,0 +1,58 @@
+# Сервер Home Assistant: версии, аптайм, бэкап, температура, шкалы, кнопки
+type: custom:system-status-card
+title: Home Assistant
+icon: mdi:home-assistant
+sections:
+  - type: tiles
+    items:
+      - entity: update.home_assistant_core_update
+        name: Core
+      - entity: update.home_assistant_supervisor_update
+        name: Supervisor
+      - entity: update.home_assistant_operating_system_update
+        name: OS
+      - entity: sensor.uptime
+        name: Аптайм
+        format: since
+      - entity: sensor.backup_last_successful_automatic_backup
+        name: Бэкап
+        format: ago
+        warn_after: 26      # часов
+        bad_after: 50
+      - entity: sensor.backup_next_scheduled_automatic_backup
+        name: След. бэкап
+        format: in
+      - entity: sensor.system_monitor_processor_temperature
+        name: Темп. CPU
+        warn: 70
+        bad: 85
+        decimals: 0
+  - type: meters
+    items:
+      - entity: sensor.system_monitor_processor_use
+        name: Процессор
+      - entity: sensor.system_monitor_memory_usage
+        name: Память
+        secondary: sensor.system_monitor_memory_free
+        secondary_prefix: свободно
+      - entity: sensor.system_monitor_disk_usage
+        name: Диск
+        warn: 80
+        bad: 90
+  - type: buttons
+    items:
+      - name: Создать бэкап
+        icon: mdi:content-save
+        service: backup.create_automatic
+        confirm: Создать бэкап сейчас?
+      - name: Перезапустить HA
+        icon: mdi:restart
+        service: homeassistant.restart
+        danger: true
+        confirm: Перезапустить Home Assistant?
+---
+# Аддоны и обновления
+type: custom:system-status-card
+sections:
+  - type: addons
+  - type: updates

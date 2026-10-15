@@ -1,0 +1,45 @@
+# Роутер: плитки, шкалы, таблица эфира и кнопка перезагрузки
+type: custom:system-status-card
+title: Роутер
+icon: mdi:router-wireless
+sections:
+  - type: tiles
+    items:
+      - entity: sensor.openwrt_uptime
+        name: Аптайм
+        format: duration          # значение в h / min / s
+      - entity: sensor.openwrt_dhcp_clients_count
+        name: Клиенты DHCP
+      - entity: sensor.openwrt_temperature_cpu_thermal
+        name: Темп. CPU
+        warn: 70
+        bad: 85
+  - type: meters
+    items:
+      - entity: sensor.openwrt_cpu_usage
+        name: Процессор
+      - entity: sensor.openwrt_root_filesystem_free
+        max: sensor.openwrt_root_filesystem_total
+        free: true                # сущность — «свободно», шкала показывает занятое
+        name: Флеш
+  - type: table
+    title: Эфир
+    columns:
+      - { name: Канал, format: plain }
+      - { name: Сигнал, decimals: 0 }
+      - { name: Шум, decimals: 0 }
+      - { name: Качество, decimals: 0, below: true, warn: 60, bad: 40 }
+    rows:
+      - name: 2.4 ГГц
+        icon: mdi:wifi
+        cells: [sensor.wifi_2_4_channel, sensor.wifi_2_4_signal, sensor.wifi_2_4_noise, sensor.wifi_2_4_quality]
+      - name: 5 ГГц
+        icon: mdi:wifi
+        cells: [sensor.wifi_5_channel, sensor.wifi_5_signal, sensor.wifi_5_noise, sensor.wifi_5_quality]
+  - type: buttons
+    items:
+      - entity: button.router_reboot
+        name: Перезагрузить роутер
+        icon: mdi:restart
+        danger: true
+        confirm: Перезагрузить роутер? Wi-Fi пропадёт на пару минут.

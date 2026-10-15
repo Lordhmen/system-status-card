@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>system-status-card demo</title>
+<!-- Демо-страница без Home Assistant на вымышленных данных.
+     Открыть локально: python3 -m http.server в корне репозитория → /docs/demo.html
+     Параметры: ?view=server|network, ?theme=light, ?width=380 -->
+<style>
+  :root { --primary-color:#03a9f4; --primary-text-color:#e1e1e1; --secondary-text-color:#9b9b9b;
+    --divider-color:rgba(225,225,225,.12); --card-background-color:#1c1c1c; --secondary-background-color:#282828;
+    --disabled-text-color:#6f6f6f; --success-color:#43a047; --error-color:#db4437; --warning-color:#ffa600; }
+  :root.light { --primary-text-color:#212121; --secondary-text-color:#727272; --divider-color:rgba(0,0,0,.12);
+    --card-background-color:#fff; --secondary-background-color:#e5e5e5; --disabled-text-color:#bdbdbd; }
+  :root.light body { background:#fafafa; }
+  body { margin:0; padding:24px; background:#111; color:var(--primary-text-color); font-family: Roboto, "Segoe UI", system-ui, sans-serif; font-size: 14px; }
+  #cards { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
+</style>
+<script>
+  const NOW = Date.parse("2026-10-15T06:20:00Z");
+  Date.now = () => NOW;
+  const P = new URLSearchParams(location.search);
+  if (P.get("theme") === "light") document.documentElement.classList.add("light");
+  if (P.get("width")) document.write('<style>#cards{max-width:' + (+P.get("width")) + 'px}</style>');
+  window.confirm = () => false;
+</script>
+<script>
+  customElements.define("ha-card", class extends HTMLElement {
+    constructor() { super(); this.attachShadow({ mode: "open" }).innerHTML =
+      "<style>:host{display:block;background:var(--card-background-color);border-radius:12px;border:1px solid var(--divider-color)}</style><slot></slot>"; }
+  });
+  const MDI = {"mdi:home-assistant":"M21.8,13H20V21H13V17.67L15.79,14.88L16.5,15C17.66,15 18.6,14.06 18.6,12.9C18.6,11.74 17.66,10.8 16.5,10.8A2.1,2.1 0 0,0 14.4,12.9L14.5,13.61L13,15.13V9.65C13.66,9.29 14.1,8.6 14.1,7.8A2.1,2.1 0 0,0 12,5.7A2.1,2.1 0 0,0 9.9,7.8C9.9,8.6 10.34,9.29 11,9.65V15.13L9.5,13.61L9.6,12.9A2.1,2.1 0 0,0 7.5,10.8A2.1,2.1 0 0,0 5.4,12.9A2.1,2.1 0 0,0 7.5,15L8.21,14.88L11,17.67V21H4V13H2.25C1.83,13 1.42,13 1.42,12.79C1.43,12.57 1.85,12.15 2.28,11.72L11,3C11.33,2.67 11.67,2.33 12,2.33C12.33,2.33 12.67,2.67 13,3L17,7V6H19V9L21.78,11.78C22.18,12.18 22.59,12.59 22.6,12.8C22.6,13 22.2,13 21.8,13M7.5,12A0.9,0.9 0 0,1 8.4,12.9A0.9,0.9 0 0,1 7.5,13.8A0.9,0.9 0 0,1 6.6,12.9A0.9,0.9 0 0,1 7.5,12M16.5,12C17,12 17.4,12.4 17.4,12.9C17.4,13.4 17,13.8 16.5,13.8A0.9,0.9 0 0,1 15.6,12.9A0.9,0.9 0 0,1 16.5,12M12,6.9C12.5,6.9 12.9,7.3 12.9,7.8C12.9,8.3 12.5,8.7 12,8.7C11.5,8.7 11.1,8.3 11.1,7.8C11.1,7.3 11.5,6.9 12,6.9Z","mdi:shield-home":"M11,13H13V16H16V11H18L12,6L6,11H8V16H11V13M12,1L21,5V11C21,16.55 17.16,21.74 12,23C6.84,21.74 3,16.55 3,11V5L12,1Z","mdi:linux":"M14.62,8.35C14.2,8.63 12.87,9.39 12.67,9.54C12.28,9.85 11.92,9.83 11.53,9.53C11.33,9.37 10,8.61 9.58,8.34C9.1,8.03 9.13,7.64 9.66,7.42C11.3,6.73 12.94,6.78 14.57,7.45C15.06,7.66 15.08,8.05 14.62,8.35M21.84,15.63C20.91,13.54 19.64,11.64 18,9.97C17.47,9.42 17.14,8.8 16.94,8.09C16.84,7.76 16.77,7.42 16.7,7.08C16.5,6.2 16.41,5.3 16,4.47C15.27,2.89 14,2.07 12.16,2C10.35,2.05 9,2.81 8.21,4.4C8,4.83 7.85,5.28 7.75,5.74C7.58,6.5 7.43,7.29 7.25,8.06C7.1,8.71 6.8,9.27 6.29,9.77C4.68,11.34 3.39,13.14 2.41,15.12C2.27,15.41 2.13,15.7 2.04,16C1.85,16.66 2.33,17.12 3.03,16.96C3.47,16.87 3.91,16.78 4.33,16.65C4.74,16.5 4.9,16.6 5,17C5.65,19.15 7.07,20.66 9.24,21.5C13.36,23.06 18.17,20.84 19.21,16.92C19.28,16.65 19.38,16.55 19.68,16.65C20.14,16.79 20.61,16.89 21.08,17C21.57,17.09 21.93,16.84 22,16.36C22.03,16.1 21.94,15.87 21.84,15.63","mdi:timer-outline":"M12,20A7,7 0 0,1 5,13A7,7 0 0,1 12,6A7,7 0 0,1 19,13A7,7 0 0,1 12,20M19.03,7.39L20.45,5.97C20,5.46 19.55,5 19.04,4.56L17.62,6C16.07,4.74 14.12,4 12,4A9,9 0 0,0 3,13A9,9 0 0,0 12,22C17,22 21,17.97 21,13C21,10.88 20.26,8.93 19.03,7.39M11,14H13V8H11M15,1H9V3H15V1Z","mdi:backup-restore":"M12,3A9,9 0 0,0 3,12H0L4,16L8,12H5A7,7 0 0,1 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19C10.5,19 9.09,18.5 7.94,17.7L6.5,19.14C8.04,20.3 9.94,21 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M14,12A2,2 0 0,0 12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12Z","mdi:calendar-clock":"M15,13H16.5V15.82L18.94,17.23L18.19,18.53L15,16.69V13M19,8H5V19H9.67C9.24,18.09 9,17.07 9,16A7,7 0 0,1 16,9C17.07,9 18.09,9.24 19,9.67V8M5,21C3.89,21 3,20.1 3,19V5C3,3.89 3.89,3 5,3H6V1H8V3H16V1H18V3H19A2,2 0 0,1 21,5V11.1C22.24,12.36 23,14.09 23,16A7,7 0 0,1 16,23C14.09,23 12.36,22.24 11.1,21H5M16,11.15A4.85,4.85 0 0,0 11.15,16C11.15,18.68 13.32,20.85 16,20.85A4.85,4.85 0 0,0 20.85,16C20.85,13.32 18.68,11.15 16,11.15Z","mdi:thermometer":"M15 13V5A3 3 0 0 0 9 5V13A5 5 0 1 0 15 13M12 4A1 1 0 0 1 13 5V8H11V5A1 1 0 0 1 12 4Z","mdi:home-analytics":"M12,3L2,12H5V20H19V12H22M9,18H7V12H9M13,18H11V10H13M17,18H15V14H17","mdi:cpu-64-bit":"M9,3V5H7A2,2 0 0,0 5,7V9H3V11H5V13H3V15H5V17A2,2 0 0,0 7,19H9V21H11V19H13V21H15V19H17A2,2 0 0,0 19,17V15H21V13H19V11H21V9H19V7A2,2 0 0,0 17,5H15V3H13V5H11V3M8,9H11.5V10.5H8.5V11.25H10.5A1,1 0 0,1 11.5,12.25V14A1,1 0 0,1 10.5,15H8A1,1 0 0,1 7,14V10A1,1 0 0,1 8,9M12.5,9H14V11H15.5V9H17V15H15.5V12.5H12.5M8.5,12.75V13.5H10V12.75","mdi:memory":"M17,17H7V7H17M21,11V9H19V7C19,5.89 18.1,5 17,5H15V3H13V5H11V3H9V5H7C5.89,5 5,5.89 5,7V9H3V11H5V13H3V15H5V17A2,2 0 0,0 7,19H9V21H11V19H13V21H15V19H17A2,2 0 0,0 19,17V15H21V13H19V11M13,13H11V11H13M15,9H9V15H15V9Z","mdi:harddisk":"M6,2H18A2,2 0 0,1 20,4V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4A2,2 0 0,1 6,2M12,4A6,6 0 0,0 6,10C6,13.31 8.69,16 12.1,16L11.22,13.77C10.95,13.29 11.11,12.68 11.59,12.4L12.45,11.9C12.93,11.63 13.54,11.79 13.82,12.27L15.74,14.69C17.12,13.59 18,11.9 18,10A6,6 0 0,0 12,4M12,9A1,1 0 0,1 13,10A1,1 0 0,1 12,11A1,1 0 0,1 11,10A1,1 0 0,1 12,9M7,18A1,1 0 0,0 6,19A1,1 0 0,0 7,20A1,1 0 0,0 8,19A1,1 0 0,0 7,18M12.09,13.27L14.58,19.58L17.17,18.08L12.95,12.77L12.09,13.27Z","mdi:content-save":"M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z","mdi:restart":"M12,4C14.1,4 16.1,4.8 17.6,6.3C20.7,9.4 20.7,14.5 17.6,17.6C15.8,19.5 13.3,20.2 10.9,19.9L11.4,17.9C13.1,18.1 14.9,17.5 16.2,16.2C18.5,13.9 18.5,10.1 16.2,7.7C15.1,6.6 13.5,6 12,6V10.6L7,5.6L12,0.6V4M6.3,17.6C3.7,15 3.3,11 5.1,7.9L6.6,9.4C5.5,11.6 5.9,14.4 7.8,16.2C8.3,16.7 8.9,17.1 9.6,17.4L9,19.4C8,19 7.1,18.4 6.3,17.6Z","mdi:web":"M16.36,14C16.44,13.34 16.5,12.68 16.5,12C16.5,11.32 16.44,10.66 16.36,10H19.74C19.9,10.64 20,11.31 20,12C20,12.69 19.9,13.36 19.74,14M14.59,19.56C15.19,18.45 15.65,17.25 15.97,16H18.92C17.96,17.65 16.43,18.93 14.59,19.56M14.34,14H9.66C9.56,13.34 9.5,12.68 9.5,12C9.5,11.32 9.56,10.65 9.66,10H14.34C14.43,10.65 14.5,11.32 14.5,12C14.5,12.68 14.43,13.34 14.34,14M12,19.96C11.17,18.76 10.5,17.43 10.09,16H13.91C13.5,17.43 12.83,18.76 12,19.96M8,8H5.08C6.03,6.34 7.57,5.06 9.4,4.44C8.8,5.55 8.35,6.75 8,8M5.08,16H8C8.35,17.25 8.8,18.45 9.4,19.56C7.57,18.93 6.03,17.65 5.08,16M4.26,14C4.1,13.36 4,12.69 4,12C4,11.31 4.1,10.64 4.26,10H7.64C7.56,10.66 7.5,11.32 7.5,12C7.5,12.68 7.56,13.34 7.64,14M12,4.03C12.83,5.23 13.5,6.57 13.91,8H10.09C10.5,6.57 11.17,5.23 12,4.03M18.92,8H15.97C15.65,6.75 15.19,5.55 14.59,4.44C16.43,5.07 17.96,6.34 18.92,8M12,2C6.47,2 2,6.5 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z","mdi:wan":"M12,2A8,8 0 0,0 4,10C4,14.03 7,17.42 11,17.93V19H10A1,1 0 0,0 9,20H2V22H9A1,1 0 0,0 10,23H14A1,1 0 0,0 15,22H22V20H15A1,1 0 0,0 14,19H13V17.93C17,17.43 20,14.03 20,10A8,8 0 0,0 12,2M12,4C12,4 12.74,5.28 13.26,7H10.74C11.26,5.28 12,4 12,4M9.77,4.43C9.5,4.93 9.09,5.84 8.74,7H6.81C7.5,5.84 8.5,4.93 9.77,4.43M14.23,4.44C15.5,4.94 16.5,5.84 17.19,7H15.26C14.91,5.84 14.5,4.93 14.23,4.44M6.09,9H8.32C8.28,9.33 8.25,9.66 8.25,10C8.25,10.34 8.28,10.67 8.32,11H6.09C6.03,10.67 6,10.34 6,10C6,9.66 6.03,9.33 6.09,9M10.32,9H13.68C13.72,9.33 13.75,9.66 13.75,10C13.75,10.34 13.72,10.67 13.68,11H10.32C10.28,10.67 10.25,10.34 10.25,10C10.25,9.66 10.28,9.33 10.32,9M15.68,9H17.91C17.97,9.33 18,9.66 18,10C18,10.34 17.97,10.67 17.91,11H15.68C15.72,10.67 15.75,10.34 15.75,10C15.75,9.66 15.72,9.33 15.68,9M6.81,13H8.74C9.09,14.16 9.5,15.07 9.77,15.56C8.5,15.06 7.5,14.16 6.81,13M10.74,13H13.26C12.74,14.72 12,16 12,16C12,16 11.26,14.72 10.74,13M15.26,13H17.19C16.5,14.16 15.5,15.07 14.23,15.57C14.5,15.07 14.91,14.16 15.26,13Z","mdi:ip-network":"M15,9H13V7H15V9M22,20V22H15A1,1 0 0,1 14,23H10A1,1 0 0,1 9,22H2V20H9A1,1 0 0,1 10,19H11V17H7A2,2 0 0,1 5,15V5A2,2 0 0,1 7,3H17A2,2 0 0,1 19,5V15A2,2 0 0,1 17,17H13V19H14A1,1 0 0,1 15,20H22M9,5H7V15H9V5M11,15H13V11H15A2,2 0 0,0 17,9V7A2,2 0 0,0 15,5H11V15Z","mdi:download-network":"M17,3A2,2 0 0,1 19,5V15A2,2 0 0,1 17,17H13V19H14A1,1 0 0,1 15,20H22V22H15A1,1 0 0,1 14,23H10A1,1 0 0,1 9,22H2V20H9A1,1 0 0,1 10,19H11V17H7C5.89,17 5,16.1 5,15V5A2,2 0 0,1 7,3H17M12,14.5L16.5,10H13V6H11V10H7.5L12,14.5Z","mdi:speedometer":"M12,16A3,3 0 0,1 9,13C9,11.88 9.61,10.9 10.5,10.39L20.21,4.77L14.68,14.35C14.18,15.33 13.17,16 12,16M12,3C13.81,3 15.5,3.5 16.97,4.32L14.87,5.53C14,5.19 13,5 12,5A8,8 0 0,0 4,13C4,15.21 4.89,17.21 6.34,18.65H6.35C6.74,19.04 6.74,19.67 6.35,20.06C5.96,20.45 5.32,20.45 4.93,20.07V20.07C3.12,18.26 2,15.76 2,13A10,10 0 0,1 12,3M22,13C22,15.76 20.88,18.26 19.07,20.07V20.07C18.68,20.45 18.05,20.45 17.66,20.06C17.27,19.67 17.27,19.04 17.66,18.65V18.65C19.11,17.2 20,15.21 20,13C20,12 19.81,11 19.46,10.1L20.67,8C21.5,9.5 22,11.18 22,13Z","mdi:timer-sand":"M6,2H18V8H18V8L14,12L18,16V16H18V22H6V16H6V16L10,12L6,8V8H6V2M16,16.5L12,12.5L8,16.5V20H16V16.5M12,11.5L16,7.5V4H8V7.5L12,11.5M10,6H14V6.75L12,8.75L10,6.75V6Z","mdi:counter":"M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M4,6V18H11V6H4M20,18V6H18.76C19,6.54 18.95,7.07 18.95,7.13C18.88,7.8 18.41,8.5 18.24,8.75L15.91,11.3L19.23,11.28L19.24,12.5L14.04,12.47L14,11.47C14,11.47 17.05,8.24 17.2,7.95C17.34,7.67 17.91,6 16.5,6C15.27,6.05 15.41,7.3 15.41,7.3L13.87,7.31C13.87,7.31 13.88,6.65 14.25,6H13V18H15.58L15.57,17.14L16.54,17.13C16.54,17.13 17.45,16.97 17.46,16.08C17.5,15.08 16.65,15.08 16.5,15.08C16.37,15.08 15.43,15.13 15.43,15.95H13.91C13.91,15.95 13.95,13.89 16.5,13.89C19.1,13.89 18.96,15.91 18.96,15.91C18.96,15.91 19,17.16 17.85,17.63L18.37,18H20M8.92,16H7.42V10.2L5.62,10.76V9.53L8.76,8.41H8.92V16Z","mdi:router-wireless":"M20.2,5.9L21,5.1C19.6,3.7 17.8,3 16,3C14.2,3 12.4,3.7 11,5.1L11.8,5.9C13,4.8 14.5,4.2 16,4.2C17.5,4.2 19,4.8 20.2,5.9M19.3,6.7C18.4,5.8 17.2,5.3 16,5.3C14.8,5.3 13.6,5.8 12.7,6.7L13.5,7.5C14.2,6.8 15.1,6.5 16,6.5C16.9,6.5 17.8,6.8 18.5,7.5L19.3,6.7M19,13H17V9H15V13H5A2,2 0 0,0 3,15V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V15A2,2 0 0,0 19,13M8,18H6V16H8V18M11.5,18H9.5V16H11.5V18M15,18H13V16H15V18Z","mdi:devices":"M3 6H21V4H3C1.9 4 1 4.9 1 6V18C1 19.1 1.9 20 3 20H7V18H3V6M13 12H9V13.78C8.39 14.33 8 15.11 8 16C8 16.89 8.39 17.67 9 18.22V20H13V18.22C13.61 17.67 14 16.88 14 16S13.61 14.33 13 13.78V12M11 17.5C10.17 17.5 9.5 16.83 9.5 16S10.17 14.5 11 14.5 12.5 15.17 12.5 16 11.83 17.5 11 17.5M22 8H16C15.5 8 15 8.5 15 9V19C15 19.5 15.5 20 16 20H22C22.5 20 23 19.5 23 19V9C23 8.5 22.5 8 22 8M21 18H17V10H21V18Z","mdi:connection":"M21.4 7.5C22.2 8.3 22.2 9.6 21.4 10.3L18.6 13.1L10.8 5.3L13.6 2.5C14.4 1.7 15.7 1.7 16.4 2.5L18.2 4.3L21.2 1.3L22.6 2.7L19.6 5.7L21.4 7.5M15.6 13.3L14.2 11.9L11.4 14.7L9.3 12.6L12.1 9.8L10.7 8.4L7.9 11.2L6.4 9.8L3.6 12.6C2.8 13.4 2.8 14.7 3.6 15.4L5.4 17.2L1.4 21.2L2.8 22.6L6.8 18.6L8.6 20.4C9.4 21.2 10.7 21.2 11.4 20.4L14.2 17.6L12.8 16.2L15.6 13.3Z","mdi:sd":"M18,8H16V4H18M15,8H13V4H15M12,8H10V4H12M18,2H10L4,8V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V4A2,2 0 0,0 18,2Z","mdi:access-point":"M4.93,4.93C3.12,6.74 2,9.24 2,12C2,14.76 3.12,17.26 4.93,19.07L6.34,17.66C4.89,16.22 4,14.22 4,12C4,9.79 4.89,7.78 6.34,6.34L4.93,4.93M19.07,4.93L17.66,6.34C19.11,7.78 20,9.79 20,12C20,14.22 19.11,16.22 17.66,17.66L19.07,19.07C20.88,17.26 22,14.76 22,12C22,9.24 20.88,6.74 19.07,4.93M7.76,7.76C6.67,8.85 6,10.35 6,12C6,13.65 6.67,15.15 7.76,16.24L9.17,14.83C8.45,14.11 8,13.11 8,12C8,10.89 8.45,9.89 9.17,9.17L7.76,7.76M16.24,7.76L14.83,9.17C15.55,9.89 16,10.89 16,12C16,13.11 15.55,14.11 14.83,14.83L16.24,16.24C17.33,15.15 18,13.65 18,12C18,10.35 17.33,8.85 16.24,7.76M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10Z","mdi:wifi":"M12,21L15.6,16.2C14.6,15.45 13.35,15 12,15C10.65,15 9.4,15.45 8.4,16.2L12,21M12,3C7.95,3 4.21,4.34 1.2,6.6L3,9C5.5,7.12 8.62,6 12,6C15.38,6 18.5,7.12 21,9L22.8,6.6C19.79,4.34 16.05,3 12,3M12,9C9.3,9 6.81,9.89 4.8,11.4L6.6,13.8C8.1,12.67 9.97,12 12,12C14.03,12 15.9,12.67 17.4,13.8L19.2,11.4C17.19,9.89 14.7,9 12,9Z","mdi:help-circle-outline":"M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z","mdi:package-up":"M20.54,5.23C20.83,5.57 21,6 21,6.5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V6.5C3,6 3.17,5.57 3.46,5.23L4.84,3.55C5.12,3.21 5.53,3 6,3H18C18.47,3 18.88,3.21 19.15,3.55L20.54,5.23M5.12,5H18.87L17.93,4H5.93L5.12,5M12,9.5L6.5,15H10V17H14V15H17.5L12,9.5Z","mdi:puzzle":"M20.5,11H19V7C19,5.89 18.1,5 17,5H13V3.5A2.5,2.5 0 0,0 10.5,1A2.5,2.5 0 0,0 8,3.5V5H4A2,2 0 0,0 2,7V10.8H3.5C5,10.8 6.2,12 6.2,13.5C6.2,15 5,16.2 3.5,16.2H2V20A2,2 0 0,0 4,22H7.8V20.5C7.8,19 9,17.8 10.5,17.8C12,17.8 13.2,19 13.2,20.5V22H17A2,2 0 0,0 19,20V16H20.5A2.5,2.5 0 0,0 23,13.5A2.5,2.5 0 0,0 20.5,11Z","mdi:puzzle-outline":"M22,13.5C22,15.26 20.7,16.72 19,16.96V20A2,2 0 0,1 17,22H13.2V21.7A2.7,2.7 0 0,0 10.5,19C9,19 7.8,20.21 7.8,21.7V22H4A2,2 0 0,1 2,20V16.2H2.3C3.79,16.2 5,15 5,13.5C5,12 3.79,10.8 2.3,10.8H2V7A2,2 0 0,1 4,5H7.04C7.28,3.3 8.74,2 10.5,2C12.26,2 13.72,3.3 13.96,5H17A2,2 0 0,1 19,7V10.04C20.7,10.28 22,11.74 22,13.5M17,15H18.5A1.5,1.5 0 0,0 20,13.5A1.5,1.5 0 0,0 18.5,12H17V7H12V5.5A1.5,1.5 0 0,0 10.5,4A1.5,1.5 0 0,0 9,5.5V7H4V9.12C5.76,9.8 7,11.5 7,13.5C7,15.5 5.75,17.2 4,17.88V20H6.12C6.8,18.25 8.5,17 10.5,17C12.5,17 14.2,18.25 14.88,20H17V15Z","mdi:play":"M8,5.14V19.14L19,12.14L8,5.14Z","mdi:check-circle-outline":"M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M12 20C7.59 20 4 16.41 4 12S7.59 4 12 4 20 7.59 20 12 16.41 20 12 20M16.59 7.58L10 14.17L7.41 11.59L6 13L10 17L18 9L16.59 7.58Z"};
+  customElements.define("ha-icon", class extends HTMLElement {
+    static get observedAttributes() { return ["icon"]; }
+    connectedCallback() { this._r(); }
+    attributeChangedCallback() { this._r(); }
+    _r() {
+      const d = MDI[this.getAttribute("icon")] || "";
+      this.style.display = "inline-flex";
+      this.innerHTML = '<svg viewBox="0 0 24 24" style="width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px);fill:currentColor"><path d="' + d + '"/></svg>';
+    }
+  });
+</script>
+<script src="../system-status-card.js"></script>
+</head>
+<body>
+<div id="cards"></div>
+<script>
+const M = 60000, H = 3600000;
+const iso = (ms) => new Date(NOW + ms).toISOString();
+const S = (state, attributes = {}) => ({ state: String(state), attributes });
+const hass = {
+  config: { time_zone: "Europe/Moscow" }, user: { is_admin: true }, entities: {}, devices: {},
+  states: {
+    "update.core": S("on", { title: "Home Assistant Core", installed_version: "2026.10.1", latest_version: "2026.10.2" }),
+    "update.supervisor": S("off", { installed_version: "2026.09.3", latest_version: "2026.09.3" }),
+    "update.os": S("off", { installed_version: "18.3", latest_version: "18.3" }),
+    "update.mushroom": S("on", { friendly_name: "Mushroom Обновление", installed_version: "v5.2.3", latest_version: "v5.3.0" }),
+    "update.bulb": S("on", { friendly_name: "Лампа в коридоре прошивки", installed_version: "1.0.4", latest_version: "1.0.6" }),
+    "sensor.boot": S(iso(-(3 * 24 + 5) * H - 12 * M)),
+    "sensor.last_backup": S(iso(-6 * H - 5 * M)),
+    "sensor.next_backup": S(iso(17 * H + 40 * M)),
+    "sensor.cpu_temp": S(52), "sensor.cpu": S(23), "sensor.ram": S(41), "sensor.ram_free": S(9.4), "sensor.disk": S(27), "sensor.disk_free": S(331),
+    "sensor.core_cpu": S(2.1),
+    "binary_sensor.wan": S("on"), "sensor.ext_ip": S("203.0.113.42"), "sensor.ont_uptime": S(349039),
+    "sensor.st_down": S(287.4), "sensor.st_up": S(142.1), "sensor.st_ping": S(6), "sensor.st_last": S(iso(-35 * M)),
+    "sensor.now_down": S(12.6), "sensor.now_up": S(1.9), "sensor.day_down": S(4.12), "sensor.month_down": S(118.4),
+    "sensor.r_uptime": S(96.9), "sensor.r_clients": S(23), "sensor.r_conn": S(368), "sensor.r_cpu": S(4), "sensor.r_mem": S(35),
+    "sensor.r_flash_free": S(31.05), "sensor.r_flash_total": S(62.27), "sensor.t_cpu": S(47), "sensor.t_24": S(53), "sensor.t_5": S(71),
+    "sensor.ch24": S(6), "sensor.ch5": S(149), "sensor.w24": S("HE20"), "sensor.w5": S("HE80"), "sensor.p24": S(20), "sensor.p5": S(23),
+    "sensor.s24": S(-45), "sensor.s5": S(-59), "sensor.n24": S(-91), "sensor.n5": S(-92), "sensor.q24": S(93), "sensor.q5": S(73),
+    "sensor.b24": S(55.3), "sensor.b5": S(776.3),
+  },
+};
+const U = (id, u) => { hass.states[id].attributes.unit_of_measurement = u; };
+["sensor.cpu_temp", "sensor.t_cpu", "sensor.t_24", "sensor.t_5"].forEach((i) => U(i, "°C"));
+["sensor.cpu", "sensor.ram", "sensor.disk", "sensor.core_cpu", "sensor.r_cpu", "sensor.r_mem", "sensor.q24", "sensor.q5"].forEach((i) => U(i, "%"));
+U("sensor.ram_free", "GiB"); U("sensor.disk_free", "GiB"); U("sensor.ont_uptime", "s"); U("sensor.r_uptime", "h");
+["sensor.st_down", "sensor.st_up", "sensor.now_down", "sensor.now_up", "sensor.b24", "sensor.b5"].forEach((i) => U(i, "Mbit/s"));
+U("sensor.st_ping", "ms"); U("sensor.day_down", "GB"); U("sensor.month_down", "GB"); U("sensor.r_flash_free", "MB"); U("sensor.r_flash_total", "MB");
+["sensor.p24", "sensor.p5", "sensor.s24", "sensor.s5", "sensor.n24", "sensor.n5"].forEach((i) => U(i, "dBm"));
+hass.entities["update.core"] = { platform: "hassio" }; hass.entities["update.mushroom"] = { platform: "hacs" }; hass.entities["update.bulb"] = { platform: "mqtt" };
+const MB = 1024 * 1024;
+const ADDONS = [
+  ["mosquitto", "Mosquitto broker", "started", "7.1.1", "7.1.1", 0.3, 38], ["zigbee2mqtt", "Zigbee2MQTT", "started", "2.14.2", "2.15.0", 1.8, 152],
+  ["esphome", "ESPHome Device Builder", "started", "2026.9.1", "2026.9.1", 0.2, 96], ["frigate", "Frigate", "started", "0.18.1", "0.18.1", 21.4, 1650],
+  ["go2rtc", "go2rtc", "started", "1.9.14", "1.9.14", 3.2, 74], ["mariadb", "MariaDB", "started", "3.0.1", "3.0.1", 0.9, 412],
+  ["samba", "Samba share", "stopped", "12.10.0", "12.10.0"], ["vscode", "Studio Code Server", "started", "7.2.0", "7.2.0", 0.1, 210],
+];
+hass.callWS = async (m) => {
+  if (m.endpoint === "/addons") return { addons: ADDONS.map(([slug, name, state, version, version_latest]) => ({ slug, name, state, version, version_latest, update_available: version !== version_latest, icon: false })) };
+  const a = ADDONS.find((x) => m.endpoint === `/addons/${x[0]}/stats`);
+  return { cpu_percent: a[5], memory_usage: a[6] * MB };
+};
+const CFG = {
+  server: [{
+    title: "Home Assistant", icon: "mdi:home-assistant",
+    sections: [
+      { type: "tiles", items: [
+        { entity: "update.core", name: "Core", icon: "mdi:home-assistant" },
+        { entity: "update.supervisor", name: "Supervisor", icon: "mdi:shield-home" },
+        { entity: "update.os", name: "OS", icon: "mdi:linux" },
+        { entity: "sensor.boot", name: "Аптайм", icon: "mdi:timer-outline", format: "since" },
+        { entity: "sensor.last_backup", name: "Последний бэкап", icon: "mdi:backup-restore", format: "ago", warn_after: 26, bad_after: 50 },
+        { entity: "sensor.next_backup", name: "Следующий бэкап", icon: "mdi:calendar-clock", format: "in" },
+        { entity: "sensor.cpu_temp", name: "Температура CPU", icon: "mdi:thermometer", warn: 70, bad: 85, decimals: 0 },
+        { entity: "sensor.core_cpu", name: "Нагрузка HA Core", icon: "mdi:home-analytics", decimals: 1 },
+      ] },
+      { type: "meters", items: [
+        { entity: "sensor.cpu", name: "Процессор", icon: "mdi:cpu-64-bit" },
+        { entity: "sensor.ram", name: "Память", icon: "mdi:memory", secondary: "sensor.ram_free", secondary_prefix: "свободно" },
+        { entity: "sensor.disk", name: "Диск", icon: "mdi:harddisk", secondary: "sensor.disk_free", secondary_prefix: "свободно", warn: 80, bad: 90 },
+      ] },
+      { type: "buttons", items: [
+        { name: "Создать бэкап", icon: "mdi:content-save", service: "backup.create_automatic", confirm: "Создать бэкап сейчас?" },
+        { name: "Перезапустить HA", icon: "mdi:restart", service: "homeassistant.restart", danger: true, confirm: "Перезапустить Home Assistant?" },
+      ] },
+    ],
+  }, {
+    sections: [{ type: "addons" }, { type: "updates" }],
+  }],
+  network: [{
+    title: "Интернет", icon: "mdi:web",
+    sections: [
+      { type: "tiles", items: [
+        { entity: "binary_sensor.wan", name: "Связь", icon: "mdi:wan", on_text: "есть", off_text: "нет связи" },
+        { entity: "sensor.ext_ip", name: "Внешний IP", icon: "mdi:ip-network" },
+        { entity: "sensor.now_down", name: "Сейчас ↓", icon: "mdi:download-network", secondary: "sensor.now_up", secondary_prefix: "↑" },
+        { entity: "sensor.st_down", name: "Speedtest ↓", icon: "mdi:speedometer", below: true, warn: 150, bad: 80, decimals: 0, secondary: "sensor.st_up", secondary_prefix: "↑" },
+        { entity: "sensor.st_ping", name: "Пинг", icon: "mdi:timer-sand", warn: 40, bad: 100 },
+        { entity: "sensor.day_down", name: "Трафик сегодня", icon: "mdi:counter", secondary: "sensor.month_down", secondary_prefix: "за месяц" },
+        { entity: "sensor.ont_uptime", name: "Аптайм ONT", icon: "mdi:timer-outline", format: "duration" },
+      ] },
+      { type: "buttons", items: [
+        { name: "Запустить Speedtest", icon: "mdi:speedometer", entity: "button.speedtest", confirm: false },
+        { name: "Перезагрузить ONT", icon: "mdi:restart", entity: "button.reboot_ont", danger: true, confirm: "Перезагрузить ONT? Интернет пропадёт на пару минут." },
+      ] },
+    ],
+  }, {
+    title: "Роутер", icon: "mdi:router-wireless",
+    sections: [
+      { type: "tiles", items: [
+        { entity: "sensor.r_uptime", name: "Аптайм", icon: "mdi:timer-outline", format: "duration" },
+        { entity: "sensor.r_clients", name: "Клиенты DHCP", icon: "mdi:devices" },
+        { entity: "sensor.r_conn", name: "Соединения", icon: "mdi:connection" },
+        { entity: "sensor.t_cpu", name: "CPU", icon: "mdi:thermometer", warn: 70, bad: 85, decimals: 0 },
+        { entity: "sensor.t_24", name: "Радио 2.4", icon: "mdi:thermometer", warn: 70, bad: 85, decimals: 0 },
+        { entity: "sensor.t_5", name: "Радио 5", icon: "mdi:thermometer", warn: 70, bad: 85, decimals: 0 },
+      ] },
+      { type: "meters", items: [
+        { entity: "sensor.r_cpu", name: "Процессор", icon: "mdi:cpu-64-bit" },
+        { entity: "sensor.r_mem", name: "Память", icon: "mdi:memory" },
+        { entity: "sensor.r_flash_free", max: "sensor.r_flash_total", free: true, name: "Флеш", icon: "mdi:sd" },
+      ] },
+      { type: "table", title: "Эфир", icon: "mdi:access-point", columns: [
+          { name: "Канал", format: "plain" }, { name: "Ширина", format: "plain" }, { name: "Мощность", decimals: 0 },
+          { name: "Сигнал", decimals: 0 }, { name: "Шум", decimals: 0 }, { name: "Качество", decimals: 0, below: true, warn: 60, bad: 40 }, { name: "Скорость", decimals: 0 } ],
+        rows: [
+          { name: "2.4 ГГц", icon: "mdi:wifi", cells: ["sensor.ch24", "sensor.w24", "sensor.p24", "sensor.s24", "sensor.n24", "sensor.q24", "sensor.b24"] },
+          { name: "5 ГГц", icon: "mdi:wifi", cells: ["sensor.ch5", "sensor.w5", "sensor.p5", "sensor.s5", "sensor.n5", "sensor.q5", "sensor.b5"] },
+        ] },
+    ],
+  }],
+};
+for (const cfg of CFG[P.get("view") || "server"]) {
+  const card = document.createElement("system-status-card");
+  card.setConfig(cfg);
+  document.getElementById("cards").appendChild(card);
+  card.hass = hass;
+}
+</script>
+</body>
+</html>

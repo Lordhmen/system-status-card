@@ -1,0 +1,46 @@
+name: Release
+
+# Релиз создаётся автоматически: поднимите SSC_VERSION в system-status-card.js
+# и отправьте в main — будет создан тег vX.Y.Z и релиз с JS-файлом.
+# Можно запустить и вручную (Actions → Release → Run workflow).
+on:
+  push:
+    branches: [main]
+    paths: [system-status-card.js, .github/workflows/release.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --check system-status-card.js
+      - run: node --test tests/*.test.mjs
+      - name: Read version
+        id: v
+        run: |
+          V=$(grep -oP 'const SSC_VERSION = "\K[^"]+' system-status-card.js)
+          echo "tag=v$V" >> "$GITHUB_OUTPUT"
+          if git rev-parse "v$V" >/dev/null 2>&1; then echo "exists=1" >> "$GITHUB_OUTPUT"; else echo "exists=0" >> "$GITHUB_OUTPUT"; fi
+      - name: Release notes from CHANGELOG
+        if: steps.v.outputs.exists == '0'
+        run: |
+          V=${{ steps.v.outputs.tag }}
+          awk -v v="${V#v}" '$0 ~ "^## "v" " {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notes.md
+          cat notes.md
+      - uses: softprops/action-gh-release@v2
+        if: steps.v.outputs.exists == '0'
+        with:
+          tag_name: ${{ steps.v.outputs.tag }}
+          name: Devices Table Card ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          body_path: notes.md
+          files: system-status-card.js
