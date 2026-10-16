@@ -14,7 +14,7 @@
  * https://github.com/Lordhmen/system-status-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const SSC_VERSION = "0.1.4";
+const SSC_VERSION = "0.1.5";
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -335,6 +335,13 @@ class SystemStatusCard extends HTMLElement {
         out.lvl = level(this._num(st, it), it.warn, it.bad, it.below);
       }
     }
+    // state_map: {"0": "всё в порядке"} — подменить показанное значение по сырому состоянию
+    if (it.state_map) {
+      const raw = String(it.attribute ? a[it.attribute] : st.state);
+      if (Object.prototype.hasOwnProperty.call(it.state_map, raw)) out.value = it.state_map[raw];
+    }
+    // level_attribute: уровень (ok | warn | bad) берётся из атрибута сущности
+    if (it.level_attribute && ["ok", "warn", "bad", "na", ""].includes(a[it.level_attribute])) out.lvl = a[it.level_attribute];
     if (it.secondary_attribute) {
       const v2 = a[it.secondary_attribute];
       out.sub = (it.secondary_prefix ? it.secondary_prefix + " " : "") + (NA.has(v2) ? "—" : String(v2));

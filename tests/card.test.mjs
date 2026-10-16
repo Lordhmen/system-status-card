@@ -198,3 +198,16 @@ test("плитка со списком из атрибута: раскрывае
   c._tap(c._config.sections[0].items[0], "0:0");
   assert.doesNotMatch(c.shadowRoot.getElementById("body").innerHTML, /lpanel/);
 });
+
+test("плитка: state_map и level_attribute", () => {
+  const c = new SSC();
+  c.setConfig({ sections: [{ type: "tiles", items: [
+    { entity: "sensor.att", name: "Внимание", warn: 1, state_map: { 0: "всё в порядке" }, level_attribute: "level" },
+  ] }] });
+  c.hass = hass({ "sensor.att": st("0", { level: "ok" }) });
+  let t = c._tile(c._config.sections[0].items[0]);
+  assert.equal(t.value, "всё в порядке"); assert.equal(t.lvl, "ok");
+  c.hass = hass({ "sensor.att": st("2", { level: "bad" }) });
+  t = c._tile(c._config.sections[0].items[0]);
+  assert.equal(t.value, "2"); assert.equal(t.lvl, "bad");
+});
