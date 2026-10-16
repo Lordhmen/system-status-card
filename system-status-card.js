@@ -14,7 +14,7 @@
  * https://github.com/Lordhmen/system-status-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const SSC_VERSION = "0.1.5";
+const SSC_VERSION = "0.1.6";
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -84,7 +84,7 @@ function level(v, warn, bad, below) {
   return warn !== undefined || bad !== undefined ? "ok" : "";
 }
 
-const SECTION_TYPES = ["tiles", "meters", "addons", "updates", "table", "buttons"];
+const SECTION_TYPES = ["clock", "tiles", "meters", "addons", "updates", "table", "buttons"];
 
 const PLATFORM_KIND = {
   hassio: "Система", hacs: "HACS", mqtt: "Zigbee", esphome: "ESPHome", wled: "WLED", zha: "Zigbee", matter: "Matter",
@@ -126,6 +126,10 @@ class SystemStatusCard extends HTMLElement {
   }
 
   connectedCallback() {
+    // часы: проверяем смену минуты каждые 2 секунды (перерисовка только при изменении HTML)
+    if (!this._clockTimer && this._config?.sections?.some((s) => s.type === "clock")) {
+      this._clockTimer = setInterval(() => this._render(), 2000);
+    }
     if (!this._timer) {
       this._timer = setInterval(() => {
         this._tick = (this._tick || 0) + 1;
@@ -136,7 +140,9 @@ class SystemStatusCard extends HTMLElement {
   }
   disconnectedCallback() {
     if (this._timer) clearInterval(this._timer);
+    if (this._clockTimer) clearInterval(this._clockTimer);
     this._timer = null;
+    this._clockTimer = null;
   }
 
   getCardSize() {
@@ -386,7 +392,11 @@ class SystemStatusCard extends HTMLElement {
             --ssc-track: color-mix(in srgb, var(--primary-text-color, #e1e1e1) 12%, transparent);
           }
         }
-        ha-card { display: block; padding: 16px; container-type: inline-size; }
+        ha-card { display: block; padding: 16px; container-type: inline-size; font-size: calc(1em * var(--ssc-scale, 1)); }
+        .clock { line-height: 1; padding: 4px 0 8px; }
+        .ctime { font-size: var(--ssc-clock, 120px); font-weight: 300; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+        .cdate { font-size: calc(var(--ssc-clock, 120px) * .22); color: var(--secondary-text-color); margin-top: .35em; }
+        .cdate::first-letter { text-transform: uppercase; }
         .top { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
         .title { flex: 1; font-size: 1.15em; font-weight: 500; display: flex; align-items: center; gap: 8px; min-width: 0; }
         .title ha-icon { --mdc-icon-size: 22px; color: var(--secondary-text-color); }
@@ -397,7 +407,7 @@ class SystemStatusCard extends HTMLElement {
         .sh ha-icon { --mdc-icon-size: 16px; }
         .sh .cnt { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; }
         /* плитки */
-        .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--ssc-tile-min, 132px), 1fr)); gap: 8px; }
+        .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--ssc-tile-min, 132px), 1fr)); gap: 8px; }
         .tile { position: relative; padding: 9px 12px 10px; border-radius: 10px; background: var(--ssc-hover); min-width: 0; cursor: pointer; overflow: hidden; }
         .tile:hover { background: color-mix(in srgb, var(--ssc-hover) 100%, var(--ssc-accent) 6%); }
         .tile::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: transparent; }
@@ -478,7 +488,7 @@ class SystemStatusCard extends HTMLElement {
           ha-card { padding: 12px; }
         }
       </style>
-      <ha-card>
+      <ha-card${c.font_scale ? ` style="--ssc-scale:${Number(c.font_scale)}"` : ""}>
         ${c.title || c.icon ? `<div class="top"><div class="title">${c.icon ? `<ha-icon icon="${esc(c.icon)}"></ha-icon>` : ""}<span>${esc(c.title || "")}</span></div><span class="note" id="note"></span></div>` : ""}
         <div id="body"></div>
       </ha-card>`;
@@ -499,6 +509,21 @@ class SystemStatusCard extends HTMLElement {
     return `<div class="sh">${s.icon ? `<ha-icon icon="${esc(s.icon)}"></ha-icon>` : ""}<span>${esc(s.title)}</span>${extra}</div>`;
   }
 
+  // Крупные часы и дата (для настенных панелей)
+  _renderClock(s) {
+    const now = new Date(Date.now());
+    let time = "", date = "";
+    try {
+      time = new Intl.DateTimeFormat("ru-RU", { timeZone: this._tz, hour: "2-digit", minute: "2-digit", ...(s.seconds ? { second: "2-digit" } : {}) }).format(now);
+      date = new Intl.DateTimeFormat("ru-RU", { timeZone: this._tz, weekday: "long", day: "numeric", month: "long" }).format(now);
+    } catch (_) {
+      time = now.toLocaleTimeString(); date = now.toLocaleDateString();
+    }
+    const size = Number(s.size) || 120;
+    return `<div class="clock" style="--ssc-clock:${size}px;text-align:${s.align === "left" ? "left" : "center"}">
+      <div class="ctime">${esc(time)}</div>${s.date !== false ? `<div class="cdate">${esc(date)}</div>` : ""}</div>`;
+  }
+
   _renderSection(s, si) {
     let inner = "";
     switch (s.type) {
@@ -508,6 +533,7 @@ class SystemStatusCard extends HTMLElement {
       case "updates": return this._renderUpdates(s, si);
       case "table": inner = this._renderTable(s, si); break;
       case "buttons": inner = this._renderButtons(s, si); break;
+      case "clock": inner = this._renderClock(s); break;
     }
     return `<div class="sec">${this._secHead(s)}${inner}</div>`;
   }

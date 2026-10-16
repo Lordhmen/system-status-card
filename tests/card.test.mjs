@@ -211,3 +211,14 @@ test("плитка: state_map и level_attribute", () => {
   t = c._tile(c._config.sections[0].items[0]);
   assert.equal(t.value, "2"); assert.equal(t.lvl, "bad");
 });
+
+test("секция clock: время и дата в часовом поясе HA", () => {
+  const c = new SSC();
+  c.setConfig({ font_scale: 1.3, sections: [{ type: "clock", size: 150 }] });
+  c.hass = hass();
+  const html = c.shadowRoot.getElementById("body").innerHTML;
+  assert.match(html, /ctime">13:00</); // 08:00Z = 13:00 Екатеринбург
+  assert.match(html, /cdate">четверг, 15 октября</);
+  assert.match(html, /--ssc-clock:150px/);
+  assert.match(c.shadowRoot.innerHTML, /--ssc-scale:1.3/);
+});
